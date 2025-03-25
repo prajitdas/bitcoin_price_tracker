@@ -1,19 +1,82 @@
 import requests
 import time
+import configparser
+import os
+import json
+import logging
 
-# global variables
-api_key = 'your_coinmarketcap_api_key'
-bot_token = 'your_telegram_bot_token'
-chat_id = 'your_telegram_account_chat_id_here'
-threshold = 30000
-time_interval = 5 * 60 # in seconds
+CONST_CONFIG_PATH = "config.ini"
+CONST_BITCOIN_PRICE_FILE_PATH = "btc.json"
+CONST_BTC_LOG_FILE_PATH = "btc.log"
+CONST_SECTION_NAME = "API"
+CONST_KEY_NAME="api_key"
+CONST_PERCENT_CHANGE = 1
+CONST_TIME_INTERVAL = 5 * 60 #Can't make more calls than one every 5 min; CoinMarketCap API restrictions
 
+def configure_logger_with_console(log_file=CONST_BTC_LOG_FILE_PATH, log_level=logging.INFO):
+    """
+    Configures a logger that writes to a file and the console.
 
-def get_btc_price():
-    url = 'https://pro-api.coinmarketcap.com/v1/cryptocurrency/listings/latest'
+    Args:
+        log_file (str): The name of the log file.
+        log_level (int): The logging level (e.g., logging.INFO, logging.DEBUG).
+    """
+
+    logger = logging.getLogger(__name__)
+    logger.setLevel(log_level)
+
+    file_handler = logging.FileHandler(log_file)
+    file_handler.setLevel(log_level)
+
+    console_handler = logging.StreamHandler() #added console handler
+    console_handler.setLevel(log_level)
+
+    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    file_handler.setFormatter(formatter)
+    console_handler.setFormatter(formatter) #format console handler
+
+    logger.addHandler(file_handler)
+    logger.addHandler(console_handler) #add console handler to logger
+
+    return logger
+
+def read_config(config_file, section, key):
+    """
+    Reads a key from a specified section in a config.ini file.
+
+    Args:
+        config_file (str): Path to the config.ini file.
+        section (str): The section in the config.ini file.
+        key (str): The key to read.
+
+    Returns:
+        str: The value of the key, or None if the key or section is not found.
+    """
+    config = configparser.ConfigParser()
+    try:
+        config.read(config_file)
+        return config.get(section, key)
+    except (configparser.NoSectionError, configparser.NoOptionError, FileNotFoundError):
+        return None
+
+def write_btc_price_list_to_json(price_time_dict):
+    price_list=[]
+    price_list.append(price_time_dict)
+    try:
+        with open(CONST_BITCOIN_PRICE_FILE_PATH, "r+") as file:
+            current_data = json.load(file)
+            current_data.extend(price_list)
+            file.seek(0)
+            json.dump(current_data, file, indent=4)
+    except FileNotFoundError:
+        with open(CONST_BITCOIN_PRICE_FILE_PATH, "w") as file:
+            json.dump(price_list, file, indent=4)
+
+def get_btc_price(api_key):
+    url = "https://pro-api.coinmarketcap.com/v1/cryptocurrency/listings/latest"
     headers = {
-        'Accepts': 'application/json',
-        'X-CMC_PRO_API_KEY': api_key
+        "Accepts": "application/json",
+        "X-CMC_PRO_API_KEY": api_key
     }
     
     # make a request to the coinmarketcap api
@@ -21,38 +84,49 @@ def get_btc_price():
     response_json = response.json()
 
     # extract the bitcoin price from the json data
-    btc_price = response_json['data'][0]
-    return btc_price['quote']['USD']['price']
+    btc_price = response_json["data"][0]
+    return btc_price["quote"]["USD"]["price"]
+    
 
-# fn to send_message through telegram
-def send_message(chat_id, msg):
-    url = f"https://api.telegram.org/bot{bot_token}/sendMessage?chat_id={chat_id}&text={msg}"
+def btc_calc_delta(price1, price2):
+    return ((price2 - price1) / price1) * 100
 
-    # send the msg
-    requests.get(url)
-
-# main fn
-def main():
-    price_list = []
+def track_btc_price(api_key, console_logger):
+    btc_curr_price = btc_prev_price = get_btc_price(api_key)
 
     # infinite loop
     while True:
-        price = get_btc_price()
-        price_list.append(price)
+        console_logger.info("Tracking BTC price...")
+        console_logger.info(f"BTC price is: {btc_curr_price}")
+        write_btc_price_list_to_json({"price": btc_curr_price, "time": time.time()})
+        btc_curr_price = get_btc_price(api_key)
 
-        # if the price falls below threshold, send an immediate msg
-        if price < threshold:
-            send_message(chat_id=chat_id, msg=f'BTC Price Drop Alert: {price}')
-
-        # send last 6 btc price
-        if len(price_list) >= 6:
-            send_message(chat_id=chat_id, msg=price_list)
-            # empty the price_list
-            price_list = []
-
+        # if the price changes by %age from last price, put it on console_logger
+        delta=btc_calc_delta(btc_prev_price, btc_curr_price)
+        if abs(delta) > CONST_PERCENT_CHANGE:
+            console_logger.info(f"BTC price changed by: {CONST_PERCENT_CHANGE}")
+            console_logger.info(f"Current price: {btc_curr_price}")
+            console_logger.info(f"Previous price: {btc_prev_price}")
+            if delta > 0:
+                console_logger.info(f"Price increased by: {delta}")
+            else:
+                console_logger.info(f"Price decreased by: {delta}")
+            btc_prev_price = btc_curr_price
+        
         # fetch the price for every dash minutes
-        time.sleep(time_interval)
+        time.sleep(CONST_TIME_INTERVAL)
+
+def main():
+    if not os.path.exists(CONST_CONFIG_PATH):
+        console_logger.info(f"Config file not found at '{CONST_CONFIG_PATH}', cannot proceed.")
+        return
+    api_key = read_config(CONST_CONFIG_PATH, CONST_SECTION_NAME, CONST_KEY_NAME)
+    if not api_key:
+        console_logger.info(f"API key not found in the config file '{CONST_CONFIG_PATH}', cannot proceed.")
+        return
+    console_logger = configure_logger_with_console()
+    track_btc_price(api_key, console_logger)
 
 # fancy way to activate the main() function
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
