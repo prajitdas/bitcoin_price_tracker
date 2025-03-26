@@ -109,7 +109,7 @@ def track_btc_price(api_key, console_logger, bot_token, chat_id):
     # infinite loop
     while True:
         console_logger.info("Tracking BTC price...")
-        console_logger.info(send_message("Tracking BTC price...", console_logger, bot_token, chat_id))
+        console_logger.info(send_message("Tracking BTC price...", bot_token, chat_id))
         console_logger.info("Started at: " + str(time.time()))
         console_logger.info(f"BTC price is: ${round(btc_curr_price, 2)}")
         write_btc_price_list_to_json({"price": btc_curr_price, "time": time.time()})
@@ -126,7 +126,7 @@ def track_btc_price(api_key, console_logger, bot_token, chat_id):
                 msg=f"Price increased by: {delta}, Current price: ${round(btc_curr_price, 2)}"
             else:
                 msg=f"Price decreased by: {delta}, Current price: ${round(btc_curr_price, 2)}"
-            send_message(msg, console_logger, bot_token, chat_id)
+            console_logger.info(send_message(msg, bot_token, chat_id))
             console_logger.info(msg)
             btc_prev_price = btc_curr_price
         
