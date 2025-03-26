@@ -112,6 +112,7 @@ def track_btc_price(api_key, console_logger, bot_token, chat_id):
         console_logger.info(send_message("Tracking BTC price...", bot_token, chat_id))
         console_logger.info("Started at: " + str(time.time()))
         console_logger.info(f"BTC price is: ${round(btc_curr_price, 2)}")
+        console_logger.info(send_message(f"BTC price is: ${round(btc_curr_price, 2)}", bot_token, chat_id))
         write_btc_price_list_to_json({"price": btc_curr_price, "time": time.time()})
         btc_curr_price = get_btc_price(api_key)
 
