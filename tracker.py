@@ -92,11 +92,12 @@ def get_btc_price(api_key):
     
 # fn to send_message through telegram
 def send_message(msg, bot_token, chat_id):
+    print(bot_token, chat_id)
     url = f"https://api.telegram.org/bot{bot_token}/sendMessage?chat_id={chat_id}&text={msg}"
     try:
         # send the msg
         r = requests.get(url)
-        return "Message status: "+str(r.status_code)+" and payload: "+r.json().__str__()
+        return "Request URL was: "+url+"Message status: "+str(r.status_code)+" and payload: "+r.json().__str__()
     except Exception as e:
         return f"Error sending message: {e}"
 
