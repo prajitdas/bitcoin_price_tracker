@@ -96,7 +96,7 @@ def send_message(msg, bot_token, chat_id):
     try:
         # send the msg
         r = requests.get(url)
-        return "Message status: "+r.status_code+" and payload: "+r.json()
+        return "Message status: "+str(r.status_code)+" and payload: "+r.json().__str__()
     except Exception as e:
         return f"Error sending message: {e}"
 
