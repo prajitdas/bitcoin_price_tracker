@@ -91,15 +91,14 @@ def get_btc_price(api_key):
     return btc_price["quote"]["USD"]["price"]
     
 # fn to send_message through telegram
-def send_message(msg, console_logger, bot_token, chat_id):
+def send_message(msg, bot_token, chat_id):
     url = f"https://api.telegram.org/bot{bot_token}/sendMessage?chat_id={chat_id}&text={msg}"
     try:
         # send the msg
         r = requests.get(url)
-        console_logger.info(r.status_code)
-        console_logger.info(r.json())
+        return "Message status: "+r.status_code+" and payload: "+r.json()
     except Exception as e:
-        print(f"Error sending message: {e}")
+        return f"Error sending message: {e}"
 
 def btc_calc_delta(price1, price2):
     return ((price2 - price1) / price1) * 100
@@ -110,7 +109,7 @@ def track_btc_price(api_key, console_logger, bot_token, chat_id):
     # infinite loop
     while True:
         console_logger.info("Tracking BTC price...")
-        send_message("Tracking BTC price...", console_logger, bot_token, chat_id)
+        console_logger.info(send_message("Tracking BTC price...", console_logger, bot_token, chat_id))
         console_logger.info("Started at: " + str(time.time()))
         console_logger.info(f"BTC price is: ${round(btc_curr_price, 2)}")
         write_btc_price_list_to_json({"price": btc_curr_price, "time": time.time()})
