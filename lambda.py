@@ -112,7 +112,7 @@ def track_btc_price(api_key, console_logger, bot_token, chat_id):
         console_logger.info("Tracking BTC price...")
         send_message("Tracking BTC price...", console_logger, bot_token, chat_id)
         console_logger.info("Started at: " + str(time.time()))
-        console_logger.info(f"BTC price is: ${round(btc_curr_price, 2)}")
+        console_logger.info(f"BTC price is: {btc_curr_price}")
         write_btc_price_list_to_json({"price": btc_curr_price, "time": time.time()})
         btc_curr_price = get_btc_price(api_key)
 
@@ -120,19 +120,37 @@ def track_btc_price(api_key, console_logger, bot_token, chat_id):
         delta=btc_calc_delta(btc_prev_price, btc_curr_price)
         if abs(delta) > CONST_PERCENT_CHANGE:
             console_logger.info(f"BTC price changed by: {CONST_PERCENT_CHANGE}")
-            console_logger.info(f"Current price: ${round(btc_curr_price, 2)}")
-            console_logger.info(f"Previous price: ${round(btc_prev_price, 2)}")
+            console_logger.info(f"Current price: {btc_curr_price}")
+            console_logger.info(f"Previous price: {btc_prev_price}")
             msg=""
             if delta > 0:
-                msg=f"Price increased by: {delta}, Current price: ${round(btc_curr_price, 2)}"
+                msg=f"Price increased by: {delta}"
             else:
-                msg=f"Price decreased by: {delta}, Current price: ${round(btc_curr_price, 2)}"
+                msg=f"Price decreased by: {delta}"
             send_message(msg, console_logger, bot_token, chat_id)
             console_logger.info(msg)
             btc_prev_price = btc_curr_price
         
         # fetch the price for every dash minutes
         time.sleep(CONST_TIME_INTERVAL)
+
+
+def lambda_handler(event, context):
+    api_url = os.environ['API_URL']
+    try:
+        response = requests.get(api_url)
+        response.raise_for_status()
+        print(response.json())
+        return {
+            'statusCode': 200,
+            'body': 'API call successful'
+        }
+    except requests.exceptions.RequestException as e:
+        print(f"Error calling API: {e}")
+        return {
+            'statusCode': 500,
+            'body': 'API call failed'
+        }
 
 def main():
     if not os.path.exists(CONST_CONFIG_PATH):
