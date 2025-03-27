@@ -113,7 +113,7 @@ def track_btc_price(api_key, console_logger, bot_token, chat_id):
 
     # infinite loop
     while True:
-        msg=f"BTC price at: {human_readable_time} is ${round(btc_curr_price, 2)}"
+        msg=f"BTC price at {human_readable_time} is ${round(btc_curr_price, 2)}"
         # Initial log
         console_logger.info(msg)
         console_logger.info(send_message(msg, bot_token, chat_id))
@@ -126,15 +126,15 @@ def track_btc_price(api_key, console_logger, bot_token, chat_id):
         # if the price changes by %age from last price, put it on console_logger
         delta=btc_calc_delta(btc_prev_price, btc_curr_price)
         if abs(delta) > CONST_PERCENT_CHANGE:
-            console_logger.info(f"BTC price changed by: {CONST_PERCENT_CHANGE}")
-            console_logger.info(f"Current price: ${round(btc_curr_price, 2)}")
-            console_logger.info(f"Previous price: ${round(btc_prev_price, 2)}")
+            console_logger.info(f"BTC price changed by {CONST_PERCENT_CHANGE}")
+            console_logger.info(f"Current price is ${round(btc_curr_price, 2)}")
+            console_logger.info(f"Previous price was ${round(btc_prev_price, 2)}")
             
-            msg=f"%, price at: {human_readable_time} is ${round(btc_curr_price, 2)}"
+            msg=f"%, price at {human_readable_time} is ${round(btc_curr_price, 2)}"
             if delta > 0:
-                msg=f"Price increased by: {round(delta,2)}"+msg
+                msg=f"Price increased by {round(delta,2)}"+msg
             else:
-                msg=f"Price decreased by: {round(delta,2)}"+msg
+                msg=f"Price decreased by {round(delta,2)}"+msg
             console_logger.info(send_message(msg, bot_token, chat_id))
             console_logger.info(msg)
             btc_prev_price = btc_curr_price
