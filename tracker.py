@@ -13,8 +13,8 @@ CONST_API_KEY_NAME="api_key"
 CONST_TELEGRAM_SECTION_NAME="TELEGRAM"
 CONST_TELEGRAM_BOT_TOKEN_NAME="bot_token"
 CONST_TELEGRAM_CHAT_ID_NAME="chat_id"
-CONST_PERCENT_CHANGE = 1
-CONST_TIME_INTERVAL = 5 * 60 #Can't make more calls than one every 5 min; CoinMarketCap API restrictions
+CONST_PERCENT_CHANGE = 5
+CONST_TIME_INTERVAL = 10 * 60 #CoinMarketCap API restricts call to every 5 mins. So, we will call every 10 mins.
 
 def configure_logger_with_console(log_file=CONST_BTC_LOG_FILE_PATH, log_level=logging.INFO):
     """
@@ -104,17 +104,21 @@ def btc_calc_delta(price1, price2):
     return ((price2 - price1) / price1) * 100
 
 def track_btc_price(api_key, console_logger, bot_token, chat_id):
+    curr_time=time.time()
     btc_curr_price = btc_prev_price = get_btc_price(api_key)
+    msg="Server restarted, starting to track BTC price..."
+    console_logger.info(msg)
+    console_logger.info(send_message(msg, bot_token, chat_id))
 
     # infinite loop
     while True:
-        console_logger.info("Tracking BTC price...")
-        console_logger.info(send_message("Tracking BTC price...", bot_token, chat_id))
-        console_logger.info("Started at: " + str(time.time()))
-        console_logger.info(f"BTC price is: ${round(btc_curr_price, 2)}")
-        console_logger.info(send_message(f"BTC price is: ${round(btc_curr_price, 2)}", bot_token, chat_id))
-        write_btc_price_list_to_json({"price": btc_curr_price, "time": time.time()})
+        msg=f"BTC price is: ${round(btc_curr_price, 2)}"
+        console_logger.info(msg)
+        # console_logger.info(send_message(msg, bot_token, chat_id))
+        write_btc_price_list_to_json({"price": btc_curr_price, "time": str(curr_time)})
+        # Updated the data
         btc_curr_price = get_btc_price(api_key)
+        curr_time=time.time()
 
         # if the price changes by %age from last price, put it on console_logger
         delta=btc_calc_delta(btc_prev_price, btc_curr_price)
@@ -122,11 +126,12 @@ def track_btc_price(api_key, console_logger, bot_token, chat_id):
             console_logger.info(f"BTC price changed by: {CONST_PERCENT_CHANGE}")
             console_logger.info(f"Current price: ${round(btc_curr_price, 2)}")
             console_logger.info(f"Previous price: ${round(btc_prev_price, 2)}")
-            msg=""
+            human_readable_time = time.ctime(curr_time)
+            msg=f"%, price at time: {human_readable_time} is ${round(btc_curr_price, 2)}"
             if delta > 0:
-                msg=f"Price increased by: {delta}, Current price: ${round(btc_curr_price, 2)}"
+                msg=f"Price increased by: {round(delta,2)}"+msg
             else:
-                msg=f"Price decreased by: {delta}, Current price: ${round(btc_curr_price, 2)}"
+                msg=f"Price decreased by: {round(delta,2)}"+msg
             console_logger.info(send_message(msg, bot_token, chat_id))
             console_logger.info(msg)
             btc_prev_price = btc_curr_price
