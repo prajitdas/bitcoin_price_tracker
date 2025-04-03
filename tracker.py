@@ -14,7 +14,7 @@ CONST_TELEGRAM_SECTION_NAME="TELEGRAM"
 CONST_TELEGRAM_BOT_TOKEN_NAME="bot_token"
 CONST_TELEGRAM_CHAT_ID_NAME="chat_id"
 CONST_PERCENT_CHANGE = 5
-CONST_TIME_INTERVAL = 10 * 60 #CoinMarketCap API restricts call to every 5 mins. So, we will call every 10 mins.
+CONST_TIME_INTERVAL = 20 * 60 #CoinMarketCap API restricts call to every 20 mins. So, we will call every 10 mins.
 
 def configure_logger_with_console(log_file=CONST_BTC_LOG_FILE_PATH, log_level=logging.INFO):
     """
